@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NG Tube Insertion Expert: เกมจำลองการใส่สายยางให้อาหาร</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -22,70 +25,91 @@
             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
+        .timer-warning {
+            color: #ef4444 !important;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between p-4">
 
-    <header class="bg-white rounded-2xl shadow-md p-4 max-w-4xl mx-auto w-full flex flex-wrap justify-between items-center gap-4 border border-teal-100">
+    <!-- Header / HUD -->
+    <header class="bg-white rounded-2xl shadow-md p-4 max-w-5xl mx-auto w-full flex flex-wrap justify-between items-center gap-4 border border-teal-100">
         <div class="flex items-center gap-3">
             <span class="text-3xl">🩺</span>
             <div>
                 <h1 class="text-xl font-bold text-teal-800">NG Tube Expert</h1>
-                <p class="text-xs text-slate-500">โปรแกรมจำลองการตัดสินใจทางพยาบาล</p>
+                <p class="text-xs text-slate-500">โปรแกรมจำลองการตัดสินใจ (เวลาจำกัด)</p>
             </div>
         </div>
-        <div class="flex items-center gap-6">
-            <div class="text-center">
-                <p class="text-xs uppercase text-slate-400 font-semibold">คะแนนความปลอดภัย</p>
-                <p id="score-display" class="text-2xl font-bold text-teal-600">0</p>
+        <div class="flex items-center gap-4 md:gap-8 flex-wrap justify-center">
+            <div class="text-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <p class="text-[10px] uppercase text-slate-400 font-bold tracking-wider">เวลาที่เหลือ</p>
+                <p id="timer-display" class="text-2xl font-black text-slate-700">30s</p>
             </div>
             <div class="text-center">
-                <p class="text-xs uppercase text-slate-400 font-semibold">ความปลอดภัยผู้ป่วย (Lives)</p>
-                <div id="lives-display" class="text-xl flex gap-1 text-rose-500">❤️❤️❤️</div>
+                <p class="text-[10px] uppercase text-slate-400 font-bold tracking-wider">คะแนน</p>
+                <p id="score-display" class="text-xl font-bold text-teal-600">0</p>
             </div>
             <div class="text-center">
-                <p class="text-xs uppercase text-slate-400 font-semibold">คะแนนสูงสุด</p>
-                <p id="highscore-display" class="text-lg font-bold text-slate-600">0</p>
+                <p class="text-[10px] uppercase text-slate-400 font-bold tracking-wider">ความปลอดภัย (Lives)</p>
+                <div id="lives-display" class="text-lg flex gap-1 text-rose-500">❤️❤️❤️</div>
+            </div>
+            <div class="text-center">
+                <p class="text-[10px] uppercase text-slate-400 font-bold tracking-wider">High Score</p>
+                <p id="highscore-display" class="text-lg font-bold text-slate-400">0</p>
             </div>
         </div>
     </header>
 
-    <main id="game-container" class="max-w-4xl mx-auto w-full bg-white rounded-3xl shadow-xl border border-slate-100 p-6 my-4 flex-grow flex flex-col justify-between transition-all duration-300">
+    <!-- Main Content Area -->
+    <main id="game-container" class="max-w-5xl mx-auto w-full bg-white rounded-3xl shadow-xl border border-slate-100 p-6 my-4 flex-grow flex flex-col justify-between transition-all duration-300">
         
+        <!-- Scenario Section -->
         <div class="w-full">
-            <div class="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl p-5 text-white shadow-sm mb-6">
-                <span class="bg-white/20 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">สถานการณ์ / ขั้นตอนปัจจุบัน</span>
-                <h2 id="scenario-title" class="text-xl font-bold mt-2 leading-relaxed">กำลังโหลดสถานการณ์...</h2>
+            <div class="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl p-6 text-white shadow-sm mb-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl">🏥</div>
+                <span class="bg-white/20 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold shadow-sm">สถานการณ์ที่ <span id="scenario-counter">1</span></span>
+                <h2 id="scenario-title" class="text-xl md:text-2xl font-bold mt-3 leading-relaxed relative z-10">กำลังโหลดสถานการณ์...</h2>
             </div>
 
-            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 flex items-center justify-around">
+            <!-- Patient Status Visual -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 flex items-center justify-around shadow-inner">
                 <div class="text-center">
                     <span class="text-4xl block mb-1">👤</span>
-                    <span class="text-xs font-semibold text-slate-600">ผู้ป่วย (เจ็บป่วยวิกฤต)</span>
+                    <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">ผู้ป่วยวิกฤต</span>
                 </div>
-                <div class="h-8 w-[1px] bg-slate-200"></div>
+                <div class="h-10 w-[2px] bg-slate-200 rounded-full"></div>
                 <div class="text-center">
-                    <span id="patient-condition-icon" class="text-4xl block mb-1">🟢</span>
-                    <span id="patient-condition-text" class="text-xs font-semibold text-slate-600">สัญญาณชีพปกติ</span>
+                    <span id="patient-condition-icon" class="text-4xl block mb-1 transition-all duration-300">🟢</span>
+                    <span id="patient-condition-text" class="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">สัญญาณชีพปกติ</span>
                 </div>
             </div>
         </div>
 
+        <!-- Options Section -->
         <div class="w-full">
-            <p class="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
-                <span>🤔</span> นิสิต/นักศึกษาพยาบาล ควรเลือกปฏิบัติอย่างไรในขั้นตอนนี้?
+            <p class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+                <span class="text-lg">🤔</span> ในฐานะพยาบาล คุณจะตัดสินใจทำสิ่งใด? (เลือก 1 ข้อ)
             </p>
-            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
+            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Dynamic Options will be inserted here -->
+            </div>
         </div>
 
-        <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
-            วิทยาลัยพยาบาลและนวัตกรรมการดูแลทางสุขภาพ | พัฒนาสื่อเพื่อการเรียนรู้เชิงโต้ตอบ (Interactive Learning)
+        <!-- Footer Info -->
+        <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400 font-medium">
+            พัฒนาสื่อเพื่อการเรียนรู้เชิงโต้ตอบ (Interactive Learning) | ฝึกฝนทักษะการตัดสินใจทางคลินิกภายใต้ความกดดัน
         </div>
     </main>
 
+    <!-- Audio Synthesis Notice -->
     <div class="text-center text-[10px] text-slate-400 mt-2">
-        *แอปพลิเคชันนี้ใช้ Web Audio API ในการสร้างเสียงประกอบโดยไม่ต้องพึ่งพาไฟล์ภายนอก
+        *รองรับระบบเสียงสังเคราะห์ Web Audio API (ติ๊ง/ออด)
     </div>
 
     <script>
@@ -93,6 +117,8 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
@@ -100,13 +126,13 @@
 
             if (type === 'correct') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); 
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.3);
-            } else if (type === 'wrong') {
+            } else if (type === 'wrong' || type === 'timeout') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4);
@@ -117,55 +143,69 @@
             }
         }
 
-        // Game Data (NG Tube Specific for Nursing Students)
+        // 4-Option Scenarios Data
         const scenarios = [
             {
-                title: "ขั้นตอนการเตรียมตัว: ก่อนเข้าพบผู้ป่วยเพื่อใส่สายยางให้อาหาร (NG Tube) สิ่งแรกที่ต้องทำตามหลักการพยาบาลคืออะไร?",
+                title: "ก่อนเข้าพบผู้ป่วยเพื่อใส่สายยางให้อาหาร (NG Tube) สิ่งแรกที่พยาบาลต้องทำตามหลัก Patient Safety คืออะไร?",
                 options: [
-                    { text: "ตรวจสอบคำสั่งการรักษาในแบบบันทึก (Doctor's orders) และชื่อ-สกุลผู้ป่วยให้ถูกต้อง", correct: true, rationale: "ถูกต้อง! ต้องตรวจสอบความถูกต้องของบุคคลและคำสั่งการรักษาก่อนเสมอเพื่อป้องกันความผิดพลาด (Patient Safety)" },
-                    { text: "ยกอุปกรณ์ไปที่เตียงผู้ป่วยทันทีเพื่อประหยัดเวลา", correct: false, rationale: "ผิด! การไม่ตรวจสอบคำสั่งการรักษาและชื่อผู้ป่วยเสี่ยงต่อการทำหัตถการผิดคน" }
+                    { text: "ตรวจสอบคำสั่งการรักษา (Doctor's orders) และระบุตัวผู้ป่วยให้ถูกต้อง", correct: true, rationale: "ถูกต้อง! ต้องตรวจสอบความถูกต้องของบุคคลและคำสั่งการรักษาก่อนเสมอ เพื่อป้องกันความผิดพลาด (Identify Patient)" },
+                    { text: "รีบนำชุดอุปกรณ์ไปที่เตียงผู้ป่วยทันทีเพื่อความรวดเร็ว", correct: false, rationale: "ผิด! การไม่ตรวจสอบคำสั่งและตัวผู้ป่วยก่อน เสี่ยงต่อการทำหัตถการผิดคน" },
+                    { text: "อธิบายขั้นตอนให้ญาติฟังทันทีโดยไม่ต้องดูป้ายข้อมือผู้ป่วย", correct: false, rationale: "ผิด! ต้องยืนยันตัวตนผู้ป่วยจากป้ายข้อมือและคำสั่งการรักษาก่อนเสมอ" },
+                    { text: "ใส่สายยางได้เลยหากจำหน้าผู้ป่วยได้", correct: false, rationale: "ผิด! การจำหน้าอย่างเดียวไม่เพียงพอต่อหลัก Patient Safety ต้องดูชื่อ-สกุล และ HN เสมอ" }
                 ]
             },
             {
-                title: "การจัดท่าผู้ป่วย: หากผู้ป่วยรู้สึกตัวดี ไม่มีข้อห้ามในการสวนท่ายกศีรษะสูง ควรจัดผู้ป่วยในท่าใดที่เหมาะสมที่สุดในการใส่ NG Tube?",
+                title: "หากผู้ป่วยรู้สึกตัวดี และไม่มีข้อห้ามในการยกศีรษะสูง ควรจัดผู้ป่วยในท่าใดที่เหมาะสมที่สุดในการใส่ NG Tube?",
                 options: [
-                    { text: "ท่าศอกสูง หรือ ท่ากึ่งนั่งกึ่งนอน (High Fowlers position) ศีรษะตั้งตรง", correct: true, rationale: "ถูกต้อง! ท่านี้ช่วยให้กลืนสายง่ายขึ้นตามแรงโน้มถ่วง และลดความเสี่ยงต่อการสำลักเข้าหลอดลม" },
-                    { text: "ท่านอนหงายราบไม่หนุนหมอน (Supine position)", correct: false, rationale: "ผิด! ท่านี้เพิ่มโอกาสที่สายจะหลุดเข้าทางเดินหายใจและเพิ่มความเสี่ยงในการสำลัก" }
+                    { text: "ท่านอนหงายราบ (Supine position)", correct: false, rationale: "ผิด! ท่านี้เพิ่มความเสี่ยงที่สายจะหลุดเข้าทางเดินหายใจและการสำลัก" },
+                    { text: "ท่าศีรษะต่ำ (Trendelenburg position)", correct: false, rationale: "ผิด! ท่านี้ใช้สำหรับผู้ป่วยช็อก ไม่เหมาะกับการใส่สายยางเข้ากระเพาะอาหาร" },
+                    { text: "ท่านอนตะแคงซ้าย (Left lateral position)", correct: false, rationale: "ผิด! ท่านี้มักใช้ในการสวนอุจจาระ ไม่ใช่การใส่ NG Tube" },
+                    { text: "ท่ากึ่งนั่งกึ่งนอน (High Fowler's position) ศีรษะตั้งตรง", correct: true, rationale: "ถูกต้อง! ท่านี้ช่วยให้กลืนสายง่ายขึ้นตามแรงโน้มถ่วง และลดความเสี่ยงต่อการสำลักเข้าหลอดลม" }
                 ]
             },
             {
-                title: "การวัดความยาวสาย: การวัดความยาวสายยาง NG Tube ที่ถูกต้องเพื่อระบุความลึกที่จะใส่เข้าสู่กระเพาะอาหาร วัดอย่างไร?",
+                title: "การวัดความยาวสาย NG Tube (NEX Measurement) ที่ถูกต้อง เพื่อระบุความลึกที่จะใส่เข้าสู่กระเพาะอาหาร วัดอย่างไร?",
                 options: [
-                    { text: "วัดจากปลายจมูก ไปที่ติ่งหู (Earlobe) แล้ววัดต่อลงมาจนถึงปลายกระดูกลิ้นปี่ (Xiphoid process)", correct: true, rationale: "ถูกต้อง! เป็นวิธีมาตรฐาน (NEX Measurement) ที่ช่วยระบุความยาวที่สายจะถึงกระเพาะอาหารได้แม่นยำ" },
-                    { text: "วัดจากริมฝีปาก ผ่านคอหอย ลงไปจนถึงสะดือ", correct: false, rationale: "ผิด! การวัดจากปากเหมาะกับ OG Tube ในทารก และการวัดถึงสะดือจะยาวเกินไปจนสายขดในกระเพาะ" }
+                    { text: "วัดจากปลายจมูก ไปติ่งหู แล้ววัดต่อลงมาจนถึงปลายกระดูกลิ้นปี่ (Xiphoid process)", correct: true, rationale: "ถูกต้อง! เป็นวิธีมาตรฐาน (NEX) ที่ระบุความยาวถึงกระเพาะอาหารได้แม่นยำ" },
+                    { text: "วัดจากริมฝีปาก ผ่านคอหอย ลงไปจนถึงสะดือ", correct: false, rationale: "ผิด! การวัดจากปากมักเป็น OG Tube และการวัดถึงสะดือจะยาวเกินไปจนสายขด" },
+                    { text: "วัดจากหน้าผาก ถึงลำคอ และลงไปที่ลิ้นปี่", correct: false, rationale: "ผิด! จุดอ้างอิงเริ่มต้นผิด (หน้าผากไม่ใช่เส้นทางเข้าของสาย)" },
+                    { text: "กะระยะด้วยสายตาประมาณ 50 เซนติเมตรในผู้ใหญ่ทุกคน", correct: false, rationale: "ผิด! สรีระแต่ละคนไม่เท่ากัน ต้องวัดแบบ Individual ด้วยเทคนิค NEX เสมอ" }
                 ]
             },
             {
-                title: "การหล่อลื่นสาย: ก่อนใส่สายยาง ต้องหล่อลื่นสายยาง (Lubricating) เพื่อลดแรงเสียดทานและลดการบาดเจ็บ ควรปฏิบัติอย่างไร?",
+                title: "ก่อนใส่สายเข้าจมูก ต้องหล่อลื่นสาย (Lubricating) เพื่อลดการบาดเจ็บ ควรเลือกใช้สารหล่อลื่นชนิดใด?",
                 options: [
-                    { text: "ใช้สารหล่อลื่นที่ละลายในน้ำ (Water-soluble jelly) เช่น K-Y jelly ทาปลายสายยาวประมาณ 3-4 นิ้ว", correct: true, rationale: "ถูกต้อง! สารหล่อลื่นที่ละลายในน้ำจะไม่ก่อให้เกิดสารตกค้างหรือภาวะปอดอักเสบหากหลุดเข้าทางเดินหายใจ" },
-                    { text: "ใช้ Petroleum jelly หรือน้ำมันพืช ทารอบสายเพื่อให้ลื่นนานขึ้น", correct: false, rationale: "ผิด! สารกลุ่มน้ำมัน (Oil-based) ห้ามใช้เด็ดขาด เพราะหากหลุดเข้าปอดจะทำให้เกิด Lipid pneumonia" }
+                    { text: "Petroleum jelly (เช่น วาสลีน)", correct: false, rationale: "ผิด! สารกลุ่มน้ำมัน (Oil-based) ห้ามใช้เด็ดขาด หากหลุดเข้าปอดจะทำให้เกิด Lipid pneumonia" },
+                    { text: "สารหล่อลื่นที่ละลายในน้ำ (Water-soluble jelly) เช่น K-Y jelly", correct: true, rationale: "ถูกต้อง! สารหล่อลื่นที่ละลายน้ำปลอดภัย ไม่ก่อให้เกิดภาวะปอดอักเสบหากเผลอหลุดเข้าทางเดินหายใจ" },
+                    { text: "น้ำเกลือล้างแผล (Normal Saline Solution)", correct: false, rationale: "ผิด! น้ำเกลือไม่มีความหนืดพอที่จะลดแรงเสียดทานในโพรงจมูกได้ดีเท่า Jelly" },
+                    { text: "น้ำมันพืช หรือเบบี้ออยล์", correct: false, rationale: "ผิด! เป็นสารกลุ่มน้ำมัน (Oil-based) เป็นอันตรายต่อปอดหากสูดสำลัก" }
                 ]
             },
             {
-                title: "ขณะใส่สายเข้าสู่คอหอย: เมื่อสอดสายเข้าจมูกผ่านโพรงจมูกไปถึงบริเวณคอหอย (Pharynx) ผู้ป่วยมีอาการไอ สำลักอย่างรุนแรง และหน้าเขียวคล้ำ (Cyanosis) คุณต้องทำอย่างไร?",
+                title: "เมื่อสอดสายถึงบริเวณคอหอย ผู้ป่วยมีอาการ 'ไอ สำลักอย่างรุนแรง หน้าเขียวคล้ำ (Cyanosis)' คุณต้องทำอย่างไร?",
                 options: [
-                    { text: "หยุดใส่ทันที รีบถอยสายออกมาพักไว้ที่โพรงจมูกหรือถอนสายออก และให้ผู้ป่วยพักรับออกซิเจน", correct: true, rationale: "ถูกต้อง! อาการสำลักและเขียวแสดงว่าสายเข้าสู่หลอดลม (Trachea) ต้องรีบถอยสายออกทันทีเพื่อความปลอดภัย" },
-                    { text: "ดันสายต่อไปอย่างรวดเร็วเพื่อให้ผ่านจุดสำลักเข้าสู่กระเพาะอาหารโดยเร็วที่สุด", correct: false, rationale: "ผิดมหันต์! การดันสายต่อในขณะเขียวค้ำอาจทำให้ผู้ป่วยขาดอากาศหายใจรุนแรงหรือเกิดปอดทะลุได้" }
+                    { text: "ดันสายต่อไปอย่างรวดเร็วเพื่อให้ผ่านจุดสำลัก", correct: false, rationale: "ผิดมหันต์! การดันสายต่ออาจแทงทะลุปอด หรือทำให้ผู้ป่วยขาดอากาศหายใจรุนแรง" },
+                    { text: "หยุดใส่ ถอยสายออกมาพักที่โพรงจมูกหรือถอนออก แล้วให้ออกซิเจน", correct: true, rationale: "ถูกต้อง! อาการสำลักและเขียวแสดงว่าสายเข้าสู่หลอดลม (Trachea) ต้องรีบถอยสายออกทันที" },
+                    { text: "บอกให้ผู้ป่วยกลั้นหายใจ แล้วค่อยๆ ดันสายต่อ", correct: false, rationale: "ผิด! ผู้ป่วยหน้าเขียวคล้ำแปลว่าขาดออกซิเจนแล้ว การให้กลั้นหายใจยิ่งทำให้แย่ลง" },
+                    { text: "ติดพลาสเตอร์ยึดสายไว้ตรงนั้น แล้วรีบไปตามแพทย์", correct: false, rationale: "ผิด! ต้องนำสิ่งที่ขวางทางเดินหายใจ (สายยาง) ออกก่อนทันที เป็น First Priority" }
                 ]
             },
             {
-                title: "เทคนิคขณะกลืนสาย: เมื่อสายผ่านเข้าคอหอยแล้วและไม่มีอาการสำลัก เพื่อให้สายเข้าสู่หลอดอาหาร (Esophagus) ได้ง่ายขึ้น ควรแนะนำผู้ป่วยอย่างไร?",
+                title: "เมื่อสายผ่านเข้าคอหอยแล้ว และไม่มีอาการสำลัก เพื่อให้สายเข้าหลอดอาหาร (Esophagus) ได้ง่ายขึ้น ควรแนะนำผู้ป่วยอย่างไร?",
                 options: [
-                    { text: "ให้ผู้ป่วยก้มศีรษะลงเล็กน้อย (Chin-to-chest) และทำท่ากลืนน้ำลายตามไปด้วยขณะดันสายลงไป", correct: true, rationale: "ถูกต้อง! การก้มศีรษะจะช่วยปิดทางเปิดหลอดลม (Epiglottis) และเปิดทางเดินหลอดอาหารให้กว้างขึ้น" },
-                    { text: "ให้ผู้ป่วยแหงนหน้าขึ้นฟ้าให้สุด เพื่อให้ทางเดินอาหารเป็นเส้นตรง", correct: false, rationale: "ผิด! การแหงนหน้าจะยิ่งทำให้ทางเปิดหลอดลมเปิดกว้างขึ้น สายมีโอกาสเข้าหลอดลมสูงขึ้น" }
+                    { text: "แหงนหน้าขึ้นฟ้าให้สุด", correct: false, rationale: "ผิด! การแหงนหน้าจะทำให้ฝาปิดกล่องเสียงเปิดกว้าง สายมีโอกาสเข้าหลอดลมสูง" },
+                    { text: "หันหน้าไปทางซ้ายให้มากที่สุด", correct: false, rationale: "ผิด! การหันหน้าไม่ได้ช่วยเปิดทางเดินอาหาร" },
+                    { text: "ก้มศีรษะลงชิดอก (Chin-to-chest) และกลืนน้ำลายตาม", correct: true, rationale: "ถูกต้อง! การก้มศีรษะช่วยให้ฝาปิดกล่องเสียง (Epiglottis) ปิดทางเดินหายใจ และเปิดหลอดอาหาร" },
+                    { text: "ไอแรงๆ ขณะพยาบาลกำลังดันสาย", correct: false, rationale: "ผิด! การไอจะดันสายสวนออกมา และอาจทำให้ระคายเคืองมากขึ้น" }
                 ]
             },
             {
-                title: "การตรวจสอบตำแหน่งสาย (ขั้นที่ 1): เมื่อใส่สายถึงความยาวที่หมายไว้แล้ว วิธีการตรวจสอบตำแหน่งปลายสายที่น่าเชื่อถือที่สุดในแนวปฏิบัติหน้างาน (Bedside check) คืออะไร?",
+                title: "เมื่อใส่สายถึงจุดที่หมายไว้ วิธีตรวจสอบตำแหน่งปลายสาย (Bedside check) ที่น่าเชื่อถือที่สุดตามแนวปฏิบัติปัจจุบันคืออะไร?",
                 options: [
-                    { text: "ใช้กระบอกฉีดยาดูดของเหลวจากกระเพาะอาหาร (Aspirate) มาทดสอบค่า pH ด้วยกระดาษลิตมัส (ต้องได้ pH < 5.5)", correct: true, rationale: "ถูกต้อง! การตรวจความเป็นกรด-ด่างของสิ่งคัดหลั่งเป็นวิธีตรวจสอบทางคลินิกที่แม่นยำสูงรองจาก X-ray" },
-                    { text: "นำปลายสายยางไปจุ่มในแก้วน้ำแล้วดูว่ามีฟองอากาศบุ๋งๆ ออกมาตามจังหวะหายใจหรือไม่", correct: false, rationale: "ผิด! วิธีจุ่มน้ำไม่แนะนำแล้วเนื่องจากเสี่ยงต่อการสูดสำลักน้ำกลับหากผู้ป่วยหายใจเข้าลึกๆ และไม่ปลอดภัย" }
+                    { text: "จุ่มปลายสายในแก้วน้ำ ดูฟองอากาศที่ปุดตามจังหวะหายใจ", correct: false, rationale: "ผิด! ไม่แนะนำแล้ว เพราะเสี่ยงสูดสำลักน้ำกลับเข้าปอดหากผู้ป่วยหายใจเข้าลึกๆ" },
+                    { text: "ดูดของเหลวมาทดสอบค่า pH ด้วยกระดาษลิตมัส (pH < 5.5)", correct: true, rationale: "ถูกต้อง! การตรวจความเป็นกรดของน้ำย่อยกระเพาะอาหาร เป็นวิธีที่แม่นยำสูงรองจาก X-ray" },
+                    { text: "ให้ผู้ป่วยลองพูด ถ้าพูดได้แปลว่าสายอยู่ในกระเพาะ", correct: false, rationale: "ผิด! สายอาจขดอยู่ในคอหอย หรือผู้ป่วยบางรายสายเข้าปอดแต่ยังพอมีเสียงพูดได้" },
+                    { text: "อัดอากาศ 30 ml แล้วฟังเสียงลมผ่านหูฟังที่หน้าท้อง", correct: false, rationale: "ผิด! แม้จะนิยมทำในอดีต แต่งานวิจัยพบว่าไม่แม่นยำพอ เพราะสายที่อยู่หลอดอาหารส่วนล่างก็อาจได้ยินเสียงลมเช่นกัน" }
                 ]
             }
         ];
@@ -174,9 +214,15 @@
         let currentScenarioIndex = 0;
         let score = 0;
         let lives = 3;
-        let highscore = localStorage.getItem('ng_nurse_highscore') || 0;
+        let highscore = localStorage.getItem('ng_nurse_highscore_v2') || 0;
+        
+        // Timer Variables
+        let timerInterval;
+        let timeLeft = 30;
+        const TIME_LIMIT = 30;
 
         // DOM Elements
+        const scenarioCounterEl = document.getElementById('scenario-counter');
         const scenarioTitleEl = document.getElementById('scenario-title');
         const optionsGridEl = document.getElementById('options-grid');
         const scoreDisplayEl = document.getElementById('score-display');
@@ -185,6 +231,7 @@
         const gameContainerEl = document.getElementById('game-container');
         const patientConditionIconEl = document.getElementById('patient-condition-icon');
         const patientConditionTextEl = document.getElementById('patient-condition-text');
+        const timerDisplayEl = document.getElementById('timer-display');
 
         // Initialize Game
         function initGame() {
@@ -196,6 +243,35 @@
             showWelcomePopup();
         }
 
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            updateTimerUI();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function updateTimerUI() {
+            timerDisplayEl.textContent = timeLeft + 's';
+            if (timeLeft <= 10) {
+                timerDisplayEl.classList.add('timer-warning');
+            } else {
+                timerDisplayEl.classList.remove('timer-warning');
+            }
+        }
+
         function updateHUD() {
             scoreDisplayEl.textContent = score;
             livesDisplayEl.textContent = "❤️".repeat(lives) + "🖤".repeat(3 - lives);
@@ -204,78 +280,120 @@
             if (lives === 3) {
                 patientConditionIconEl.textContent = "🟢";
                 patientConditionTextEl.textContent = "สัญญาณชีพปกติ ปลอดภัย";
-                patientConditionTextEl.className = "text-xs font-semibold text-emerald-600";
+                patientConditionTextEl.className = "text-[11px] font-bold text-emerald-600 uppercase tracking-wide";
             } else if (lives === 2) {
                 patientConditionIconEl.textContent = "🟡";
                 patientConditionTextEl.textContent = "ผู้ป่วยเริ่มระคายเคือง/ไอ";
-                patientConditionTextEl.className = "text-xs font-semibold text-amber-500";
+                patientConditionTextEl.className = "text-[11px] font-bold text-amber-500 uppercase tracking-wide";
             } else if (lives === 1) {
                 patientConditionIconEl.textContent = "🔴";
                 patientConditionTextEl.textContent = "วิกฤต! มีความเสี่ยงสูง";
-                patientConditionTextEl.className = "text-xs font-semibold text-rose-500";
+                patientConditionTextEl.className = "text-[11px] font-bold text-rose-500 uppercase tracking-wide";
             }
         }
 
         function showWelcomePopup() {
             Swal.fire({
-                title: 'ยินดีต้อนรับสู่ NG Tube Challenge! 🩺',
+                title: 'NG Tube Challenge! ⏱️',
                 html: `
-                    <p class="text-sm text-slate-600 text-left mb-3">
-                        แบบทดสอบเชิงปฏิสัมพันธ์นี้ ออกแบบมาเพื่อทดสอบกระบวนการคิดและการตัดสินใจของ 
-                        <b>นิสิต/นักศึกษาพยาบาล</b> ในหัตถการการใส่สายยางให้อาหารทางจมูก (Nasogastric Tube Insertion)
-                    </p>
-                    <ul class="text-xs text-left text-slate-500 list-disc pl-5 space-y-1">
-                        <li>ตอบคำถามเพื่อสะสมคะแนนวิชาชีพพยาบาล (ข้อละ 10 คะแนน)</li>
-                        <li>หากเลือกคำตอบที่เป็นอันตรายต่อผู้ป่วย พลังชีวิตจะลดลง</li>
-                        <li>เรียนรู้จากคำอธิบาย (Rationale) ในทุกๆ ข้อเพื่อเพิ่มพูนความรู้</li>
+                    <div class="text-sm text-slate-600 text-left mb-3">
+                        ทดสอบการตัดสินใจทางพยาบาลแบบจำกัดเวลา
+                    </div>
+                    <ul class="text-xs text-left text-slate-500 list-none space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <li>🎯 <b>กติกา:</b> มี 4 ตัวเลือก (เลือกข้อที่ถูกที่สุด)</li>
+                        <li>⏱️ <b>เวลา:</b> 30 วินาที ต่อ 1 สถานการณ์</li>
+                        <li>💔 <b>บทลงโทษ:</b> ตอบผิด หรือ ปล่อยเวลาหมด พลังชีวิตจะลดลง</li>
                     </ul>
                 `,
                 icon: 'info',
-                confirmButtonText: 'เริ่มการทดสอบ',
+                confirmButtonText: 'รับทราบ เริ่มปฏิบัติงาน',
                 confirmButtonColor: '#0d9488',
                 allowOutsideClick: false
             }).then(() => {
+                // Initialize audio context on first user interaction
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
                 loadScenario();
             });
         }
 
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
         function loadScenario() {
             if (currentScenarioIndex >= scenarios.length) {
-                endGame(true); // Win condition
+                endGame(true);
                 return;
             }
 
+            scenarioCounterEl.textContent = currentScenarioIndex + 1;
             const currentScenario = scenarios[currentScenarioIndex];
-            scenarioTitleEl.textContent = `${currentScenarioIndex + 1}. ${currentScenario.title}`;
+            scenarioTitleEl.textContent = currentScenario.title;
             optionsGridEl.innerHTML = '';
 
-            // Shuffle options slightly or just render them
-            currentScenario.options.forEach((option) => {
+            // Shuffle options so correct answer isn't always in same spot
+            const shuffledOptions = shuffleArray([...currentScenario.options]);
+
+            shuffledOptions.forEach((option, index) => {
                 const button = document.createElement('button');
-                button.className = "w-full text-left p-5 rounded-2xl border-2 border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 active:scale-[0.98] transition-all duration-200 flex items-start gap-3 bg-white shadow-sm";
+                button.className = "w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-teal-500 hover:bg-teal-50 hover:shadow-md active:scale-[0.98] transition-all duration-200 flex items-start gap-3 bg-white";
                 button.innerHTML = `
-                    <span class="bg-slate-100 text-slate-600 font-bold rounded-lg px-2 py-1 text-xs mt-0.5">เลือก</span>
+                    <span class="bg-slate-100 text-slate-600 font-bold rounded-lg px-2.5 py-1 text-xs shrink-0 mt-0.5">${index + 1}</span>
                     <span class="text-sm font-medium text-slate-700 leading-relaxed">${option.text}</span>
                 `;
                 button.onclick = () => handleAnswer(option);
                 optionsGridEl.appendChild(button);
             });
+
+            startTimer();
+        }
+
+        function handleTimeOut() {
+            playSound('timeout');
+            lives--;
+            updateHUD();
+            
+            gameContainerEl.classList.add('shake');
+            setTimeout(() => gameContainerEl.classList.remove('shake'), 500);
+
+            Swal.fire({
+                title: 'หมดเวลา! ⏰',
+                text: 'การตัดสินใจล่าช้าอาจส่งผลเสียต่อผู้ป่วย พยาบาลต้องคิดวิเคราะห์ให้รวดเร็วและแม่นยำ',
+                icon: 'warning',
+                confirmButtonText: 'ไปข้อถัดไป',
+                confirmButtonColor: '#e11d48',
+                allowOutsideClick: false
+            }).then(() => {
+                checkLivesAndProceed();
+            });
         }
 
         function handleAnswer(selectedOption) {
+            stopTimer(); // Stop timer immediately when answered
+
             if (selectedOption.correct) {
                 // Correct Answer
                 playSound('correct');
                 score += 10;
+                
+                // Extra points for answering fast
+                if (timeLeft > 20) score += 5; // Speed bonus
+                
                 if (score > highscore) {
                     highscore = score;
-                    localStorage.setItem('ng_nurse_highscore', highscore);
+                    localStorage.setItem('ng_nurse_highscore_v2', highscore);
                     highscoreDisplayEl.textContent = highscore;
                 }
                 updateHUD();
 
                 Swal.fire({
-                    title: 'ถูกต้องตามหลักการพยาบาล! 🎉',
+                    title: 'ถูกต้อง! 🎉',
                     text: selectedOption.rationale,
                     icon: 'success',
                     confirmButtonText: 'ขั้นตอนต่อไป',
@@ -292,41 +410,44 @@
                 lives--;
                 updateHUD();
                 
-                // Screen shake effect
                 gameContainerEl.classList.add('shake');
                 setTimeout(() => gameContainerEl.classList.remove('shake'), 500);
 
                 Swal.fire({
-                    title: 'ระวัง! เกิดภาวะแทรกซ้อน ⚠️',
+                    title: 'ระวัง! เกิดข้อผิดพลาด ⚠️',
                     text: selectedOption.rationale,
                     icon: 'error',
-                    confirmButtonText: 'ทำความเข้าใจและลองใหม่',
+                    confirmButtonText: 'ทำความเข้าใจและไปต่อ',
                     confirmButtonColor: '#e11d48',
                     allowOutsideClick: false
                 }).then(() => {
-                    if (lives <= 0) {
-                        endGame(false); // Lose condition
-                    } else {
-                        // Let them continue or rethink, in this mode we advance but with a penalty
-                        currentScenarioIndex++;
-                        loadScenario();
-                    }
+                    checkLivesAndProceed();
                 });
             }
         }
 
+        function checkLivesAndProceed() {
+            if (lives <= 0) {
+                endGame(false);
+            } else {
+                currentScenarioIndex++;
+                loadScenario();
+            }
+        }
+
         function endGame(isWin) {
-            let title = isWin ? 'ยินดีด้วย! คุณผ่านการทดสอบ 🎓' : 'ผู้ป่วยไม่ปลอดภัย (Game Over) 🛑';
+            stopTimer();
+            let title = isWin ? 'ยินดีด้วย! คุณผ่านการประเมิน 🎓' : 'ผู้ป่วยไม่ปลอดภัย (Game Over) 🛑';
             let text = isWin 
-                ? `คุณทำคะแนนรวมได้ ${score} คะแนน แสดงถึงความเข้าใจในหลักการพยาบาลที่ยอดเยี่ยม!` 
-                : `เกิดความผิดพลาดในกระบวนการพยาบาลจนส่งผลเสียต่อผู้ป่วยอย่างรุนแรง กรุณาทบทวนบทเรียนอีกครั้ง`;
+                ? `คุณทำคะแนนรวมได้ ${score} คะแนน การตัดสินใจแม่นยำและรวดเร็ว!` 
+                : `เกิดความล่าช้าหรือผิดพลาดในกระบวนการพยาบาล กรุณาทบทวนบทเรียนอีกครั้ง`;
             let icon = isWin ? 'success' : 'error';
 
             Swal.fire({
                 title: title,
                 text: text,
                 icon: icon,
-                confirmButtonText: 'เริ่มทำแบบทดสอบใหม่',
+                confirmButtonText: 'เริ่มทดสอบใหม่',
                 confirmButtonColor: '#0d9488',
                 allowOutsideClick: false
             }).then(() => {
@@ -334,7 +455,7 @@
             });
         }
 
-        // Start the web app
+        // Start App
         initGame();
     </script>
 </body>
