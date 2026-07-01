@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NG Tube Insertion Expert: เกมจำลองการใส่สายยางให้อาหาร</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4">
+
+    <header class="bg-white rounded-2xl shadow-md p-4 max-w-4xl mx-auto w-full flex flex-wrap justify-between items-center gap-4 border border-teal-100">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🩺</span>
+            <div>
+                <h1 class="text-xl font-bold text-teal-800">NG Tube Expert</h1>
+                <p class="text-xs text-slate-500">โปรแกรมจำลองการตัดสินใจทางพยาบาล</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="text-center">
+                <p class="text-xs uppercase text-slate-400 font-semibold">คะแนนความปลอดภัย</p>
+                <p id="score-display" class="text-2xl font-bold text-teal-600">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs uppercase text-slate-400 font-semibold">ความปลอดภัยผู้ป่วย (Lives)</p>
+                <div id="lives-display" class="text-xl flex gap-1 text-rose-500">❤️❤️❤️</div>
+            </div>
+            <div class="text-center">
+                <p class="text-xs uppercase text-slate-400 font-semibold">คะแนนสูงสุด</p>
+                <p id="highscore-display" class="text-lg font-bold text-slate-600">0</p>
+            </div>
+        </div>
+    </header>
+
+    <main id="game-container" class="max-w-4xl mx-auto w-full bg-white rounded-3xl shadow-xl border border-slate-100 p-6 my-4 flex-grow flex flex-col justify-between transition-all duration-300">
+        
+        <div class="w-full">
+            <div class="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl p-5 text-white shadow-sm mb-6">
+                <span class="bg-white/20 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">สถานการณ์ / ขั้นตอนปัจจุบัน</span>
+                <h2 id="scenario-title" class="text-xl font-bold mt-2 leading-relaxed">กำลังโหลดสถานการณ์...</h2>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 flex items-center justify-around">
+                <div class="text-center">
+                    <span class="text-4xl block mb-1">👤</span>
+                    <span class="text-xs font-semibold text-slate-600">ผู้ป่วย (เจ็บป่วยวิกฤต)</span>
+                </div>
+                <div class="h-8 w-[1px] bg-slate-200"></div>
+                <div class="text-center">
+                    <span id="patient-condition-icon" class="text-4xl block mb-1">🟢</span>
+                    <span id="patient-condition-text" class="text-xs font-semibold text-slate-600">สัญญาณชีพปกติ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full">
+            <p class="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+                <span>🤔</span> นิสิต/นักศึกษาพยาบาล ควรเลือกปฏิบัติอย่างไรในขั้นตอนนี้?
+            </p>
+            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
+            วิทยาลัยพยาบาลและนวัตกรรมการดูแลทางสุขภาพ | พัฒนาสื่อเพื่อการเรียนรู้เชิงโต้ตอบ (Interactive Learning)
+        </div>
+    </main>
+
+    <div class="text-center text-[10px] text-slate-400 mt-2">
+        *แอปพลิเคชันนี้ใช้ Web Audio API ในการสร้างเสียงประกอบโดยไม่ต้องพึ่งพาไฟล์ภายนอก
+    </div>
+
+    <script>
+        // Web Audio API Sound Generator
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+
+        // Game Data (NG Tube Specific for Nursing Students)
+        const scenarios = [
+            {
+                title: "ขั้นตอนการเตรียมตัว: ก่อนเข้าพบผู้ป่วยเพื่อใส่สายยางให้อาหาร (NG Tube) สิ่งแรกที่ต้องทำตามหลักการพยาบาลคืออะไร?",
+                options: [
+                    { text: "ตรวจสอบคำสั่งการรักษาในแบบบันทึก (Doctor's orders) และชื่อ-สกุลผู้ป่วยให้ถูกต้อง", correct: true, rationale: "ถูกต้อง! ต้องตรวจสอบความถูกต้องของบุคคลและคำสั่งการรักษาก่อนเสมอเพื่อป้องกันความผิดพลาด (Patient Safety)" },
+                    { text: "ยกอุปกรณ์ไปที่เตียงผู้ป่วยทันทีเพื่อประหยัดเวลา", correct: false, rationale: "ผิด! การไม่ตรวจสอบคำสั่งการรักษาและชื่อผู้ป่วยเสี่ยงต่อการทำหัตถการผิดคน" }
+                ]
+            },
+            {
+                title: "การจัดท่าผู้ป่วย: หากผู้ป่วยรู้สึกตัวดี ไม่มีข้อห้ามในการสวนท่ายกศีรษะสูง ควรจัดผู้ป่วยในท่าใดที่เหมาะสมที่สุดในการใส่ NG Tube?",
+                options: [
+                    { text: "ท่าศอกสูง หรือ ท่ากึ่งนั่งกึ่งนอน (High Fowlers position) ศีรษะตั้งตรง", correct: true, rationale: "ถูกต้อง! ท่านี้ช่วยให้กลืนสายง่ายขึ้นตามแรงโน้มถ่วง และลดความเสี่ยงต่อการสำลักเข้าหลอดลม" },
+                    { text: "ท่านอนหงายราบไม่หนุนหมอน (Supine position)", correct: false, rationale: "ผิด! ท่านี้เพิ่มโอกาสที่สายจะหลุดเข้าทางเดินหายใจและเพิ่มความเสี่ยงในการสำลัก" }
+                ]
+            },
+            {
+                title: "การวัดความยาวสาย: การวัดความยาวสายยาง NG Tube ที่ถูกต้องเพื่อระบุความลึกที่จะใส่เข้าสู่กระเพาะอาหาร วัดอย่างไร?",
+                options: [
+                    { text: "วัดจากปลายจมูก ไปที่ติ่งหู (Earlobe) แล้ววัดต่อลงมาจนถึงปลายกระดูกลิ้นปี่ (Xiphoid process)", correct: true, rationale: "ถูกต้อง! เป็นวิธีมาตรฐาน (NEX Measurement) ที่ช่วยระบุความยาวที่สายจะถึงกระเพาะอาหารได้แม่นยำ" },
+                    { text: "วัดจากริมฝีปาก ผ่านคอหอย ลงไปจนถึงสะดือ", correct: false, rationale: "ผิด! การวัดจากปากเหมาะกับ OG Tube ในทารก และการวัดถึงสะดือจะยาวเกินไปจนสายขดในกระเพาะ" }
+                ]
+            },
+            {
+                title: "การหล่อลื่นสาย: ก่อนใส่สายยาง ต้องหล่อลื่นสายยาง (Lubricating) เพื่อลดแรงเสียดทานและลดการบาดเจ็บ ควรปฏิบัติอย่างไร?",
+                options: [
+                    { text: "ใช้สารหล่อลื่นที่ละลายในน้ำ (Water-soluble jelly) เช่น K-Y jelly ทาปลายสายยาวประมาณ 3-4 นิ้ว", correct: true, rationale: "ถูกต้อง! สารหล่อลื่นที่ละลายในน้ำจะไม่ก่อให้เกิดสารตกค้างหรือภาวะปอดอักเสบหากหลุดเข้าทางเดินหายใจ" },
+                    { text: "ใช้ Petroleum jelly หรือน้ำมันพืช ทารอบสายเพื่อให้ลื่นนานขึ้น", correct: false, rationale: "ผิด! สารกลุ่มน้ำมัน (Oil-based) ห้ามใช้เด็ดขาด เพราะหากหลุดเข้าปอดจะทำให้เกิด Lipid pneumonia" }
+                ]
+            },
+            {
+                title: "ขณะใส่สายเข้าสู่คอหอย: เมื่อสอดสายเข้าจมูกผ่านโพรงจมูกไปถึงบริเวณคอหอย (Pharynx) ผู้ป่วยมีอาการไอ สำลักอย่างรุนแรง และหน้าเขียวคล้ำ (Cyanosis) คุณต้องทำอย่างไร?",
+                options: [
+                    { text: "หยุดใส่ทันที รีบถอยสายออกมาพักไว้ที่โพรงจมูกหรือถอนสายออก และให้ผู้ป่วยพักรับออกซิเจน", correct: true, rationale: "ถูกต้อง! อาการสำลักและเขียวแสดงว่าสายเข้าสู่หลอดลม (Trachea) ต้องรีบถอยสายออกทันทีเพื่อความปลอดภัย" },
+                    { text: "ดันสายต่อไปอย่างรวดเร็วเพื่อให้ผ่านจุดสำลักเข้าสู่กระเพาะอาหารโดยเร็วที่สุด", correct: false, rationale: "ผิดมหันต์! การดันสายต่อในขณะเขียวค้ำอาจทำให้ผู้ป่วยขาดอากาศหายใจรุนแรงหรือเกิดปอดทะลุได้" }
+                ]
+            },
+            {
+                title: "เทคนิคขณะกลืนสาย: เมื่อสายผ่านเข้าคอหอยแล้วและไม่มีอาการสำลัก เพื่อให้สายเข้าสู่หลอดอาหาร (Esophagus) ได้ง่ายขึ้น ควรแนะนำผู้ป่วยอย่างไร?",
+                options: [
+                    { text: "ให้ผู้ป่วยก้มศีรษะลงเล็กน้อย (Chin-to-chest) และทำท่ากลืนน้ำลายตามไปด้วยขณะดันสายลงไป", correct: true, rationale: "ถูกต้อง! การก้มศีรษะจะช่วยปิดทางเปิดหลอดลม (Epiglottis) และเปิดทางเดินหลอดอาหารให้กว้างขึ้น" },
+                    { text: "ให้ผู้ป่วยแหงนหน้าขึ้นฟ้าให้สุด เพื่อให้ทางเดินอาหารเป็นเส้นตรง", correct: false, rationale: "ผิด! การแหงนหน้าจะยิ่งทำให้ทางเปิดหลอดลมเปิดกว้างขึ้น สายมีโอกาสเข้าหลอดลมสูงขึ้น" }
+                ]
+            },
+            {
+                title: "การตรวจสอบตำแหน่งสาย (ขั้นที่ 1): เมื่อใส่สายถึงความยาวที่หมายไว้แล้ว วิธีการตรวจสอบตำแหน่งปลายสายที่น่าเชื่อถือที่สุดในแนวปฏิบัติหน้างาน (Bedside check) คืออะไร?",
+                options: [
+                    { text: "ใช้กระบอกฉีดยาดูดของเหลวจากกระเพาะอาหาร (Aspirate) มาทดสอบค่า pH ด้วยกระดาษลิตมัส (ต้องได้ pH < 5.5)", correct: true, rationale: "ถูกต้อง! การตรวจความเป็นกรด-ด่างของสิ่งคัดหลั่งเป็นวิธีตรวจสอบทางคลินิกที่แม่นยำสูงรองจาก X-ray" },
+                    { text: "นำปลายสายยางไปจุ่มในแก้วน้ำแล้วดูว่ามีฟองอากาศบุ๋งๆ ออกมาตามจังหวะหายใจหรือไม่", correct: false, rationale: "ผิด! วิธีจุ่มน้ำไม่แนะนำแล้วเนื่องจากเสี่ยงต่อการสูดสำลักน้ำกลับหากผู้ป่วยหายใจเข้าลึกๆ และไม่ปลอดภัย" }
+                ]
+            }
+        ];
+
+        // Game State Variables
+        let currentScenarioIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let highscore = localStorage.getItem('ng_nurse_highscore') || 0;
+
+        // DOM Elements
+        const scenarioTitleEl = document.getElementById('scenario-title');
+        const optionsGridEl = document.getElementById('options-grid');
+        const scoreDisplayEl = document.getElementById('score-display');
+        const livesDisplayEl = document.getElementById('lives-display');
+        const highscoreDisplayEl = document.getElementById('highscore-display');
+        const gameContainerEl = document.getElementById('game-container');
+        const patientConditionIconEl = document.getElementById('patient-condition-icon');
+        const patientConditionTextEl = document.getElementById('patient-condition-text');
+
+        // Initialize Game
+        function initGame() {
+            currentScenarioIndex = 0;
+            score = 0;
+            lives = 3;
+            highscoreDisplayEl.textContent = highscore;
+            updateHUD();
+            showWelcomePopup();
+        }
+
+        function updateHUD() {
+            scoreDisplayEl.textContent = score;
+            livesDisplayEl.textContent = "❤️".repeat(lives) + "🖤".repeat(3 - lives);
+            
+            // Patient condition visualization based on remaining lives
+            if (lives === 3) {
+                patientConditionIconEl.textContent = "🟢";
+                patientConditionTextEl.textContent = "สัญญาณชีพปกติ ปลอดภัย";
+                patientConditionTextEl.className = "text-xs font-semibold text-emerald-600";
+            } else if (lives === 2) {
+                patientConditionIconEl.textContent = "🟡";
+                patientConditionTextEl.textContent = "ผู้ป่วยเริ่มระคายเคือง/ไอ";
+                patientConditionTextEl.className = "text-xs font-semibold text-amber-500";
+            } else if (lives === 1) {
+                patientConditionIconEl.textContent = "🔴";
+                patientConditionTextEl.textContent = "วิกฤต! มีความเสี่ยงสูง";
+                patientConditionTextEl.className = "text-xs font-semibold text-rose-500";
+            }
+        }
+
+        function showWelcomePopup() {
+            Swal.fire({
+                title: 'ยินดีต้อนรับสู่ NG Tube Challenge! 🩺',
+                html: `
+                    <p class="text-sm text-slate-600 text-left mb-3">
+                        แบบทดสอบเชิงปฏิสัมพันธ์นี้ ออกแบบมาเพื่อทดสอบกระบวนการคิดและการตัดสินใจของ 
+                        <b>นิสิต/นักศึกษาพยาบาล</b> ในหัตถการการใส่สายยางให้อาหารทางจมูก (Nasogastric Tube Insertion)
+                    </p>
+                    <ul class="text-xs text-left text-slate-500 list-disc pl-5 space-y-1">
+                        <li>ตอบคำถามเพื่อสะสมคะแนนวิชาชีพพยาบาล (ข้อละ 10 คะแนน)</li>
+                        <li>หากเลือกคำตอบที่เป็นอันตรายต่อผู้ป่วย พลังชีวิตจะลดลง</li>
+                        <li>เรียนรู้จากคำอธิบาย (Rationale) ในทุกๆ ข้อเพื่อเพิ่มพูนความรู้</li>
+                    </ul>
+                `,
+                icon: 'info',
+                confirmButtonText: 'เริ่มการทดสอบ',
+                confirmButtonColor: '#0d9488',
+                allowOutsideClick: false
+            }).then(() => {
+                loadScenario();
+            });
+        }
+
+        function loadScenario() {
+            if (currentScenarioIndex >= scenarios.length) {
+                endGame(true); // Win condition
+                return;
+            }
+
+            const currentScenario = scenarios[currentScenarioIndex];
+            scenarioTitleEl.textContent = `${currentScenarioIndex + 1}. ${currentScenario.title}`;
+            optionsGridEl.innerHTML = '';
+
+            // Shuffle options slightly or just render them
+            currentScenario.options.forEach((option) => {
+                const button = document.createElement('button');
+                button.className = "w-full text-left p-5 rounded-2xl border-2 border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 active:scale-[0.98] transition-all duration-200 flex items-start gap-3 bg-white shadow-sm";
+                button.innerHTML = `
+                    <span class="bg-slate-100 text-slate-600 font-bold rounded-lg px-2 py-1 text-xs mt-0.5">เลือก</span>
+                    <span class="text-sm font-medium text-slate-700 leading-relaxed">${option.text}</span>
+                `;
+                button.onclick = () => handleAnswer(option);
+                optionsGridEl.appendChild(button);
+            });
+        }
+
+        function handleAnswer(selectedOption) {
+            if (selectedOption.correct) {
+                // Correct Answer
+                playSound('correct');
+                score += 10;
+                if (score > highscore) {
+                    highscore = score;
+                    localStorage.setItem('ng_nurse_highscore', highscore);
+                    highscoreDisplayEl.textContent = highscore;
+                }
+                updateHUD();
+
+                Swal.fire({
+                    title: 'ถูกต้องตามหลักการพยาบาล! 🎉',
+                    text: selectedOption.rationale,
+                    icon: 'success',
+                    confirmButtonText: 'ขั้นตอนต่อไป',
+                    confirmButtonColor: '#0d9488',
+                    allowOutsideClick: false
+                }).then(() => {
+                    currentScenarioIndex++;
+                    loadScenario();
+                });
+
+            } else {
+                // Wrong Answer
+                playSound('wrong');
+                lives--;
+                updateHUD();
+                
+                // Screen shake effect
+                gameContainerEl.classList.add('shake');
+                setTimeout(() => gameContainerEl.classList.remove('shake'), 500);
+
+                Swal.fire({
+                    title: 'ระวัง! เกิดภาวะแทรกซ้อน ⚠️',
+                    text: selectedOption.rationale,
+                    icon: 'error',
+                    confirmButtonText: 'ทำความเข้าใจและลองใหม่',
+                    confirmButtonColor: '#e11d48',
+                    allowOutsideClick: false
+                }).then(() => {
+                    if (lives <= 0) {
+                        endGame(false); // Lose condition
+                    } else {
+                        // Let them continue or rethink, in this mode we advance but with a penalty
+                        currentScenarioIndex++;
+                        loadScenario();
+                    }
+                });
+            }
+        }
+
+        function endGame(isWin) {
+            let title = isWin ? 'ยินดีด้วย! คุณผ่านการทดสอบ 🎓' : 'ผู้ป่วยไม่ปลอดภัย (Game Over) 🛑';
+            let text = isWin 
+                ? `คุณทำคะแนนรวมได้ ${score} คะแนน แสดงถึงความเข้าใจในหลักการพยาบาลที่ยอดเยี่ยม!` 
+                : `เกิดความผิดพลาดในกระบวนการพยาบาลจนส่งผลเสียต่อผู้ป่วยอย่างรุนแรง กรุณาทบทวนบทเรียนอีกครั้ง`;
+            let icon = isWin ? 'success' : 'error';
+
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: icon,
+                confirmButtonText: 'เริ่มทำแบบทดสอบใหม่',
+                confirmButtonColor: '#0d9488',
+                allowOutsideClick: false
+            }).then(() => {
+                initGame();
+            });
+        }
+
+        // Start the web app
+        initGame();
+    </script>
+</body>
+</html>
